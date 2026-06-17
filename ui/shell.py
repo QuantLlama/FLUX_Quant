@@ -34,6 +34,7 @@ from analysis.volume_analysis import full_volume_analysis
 from analysis.indicators import calculate_all_indicators
 from analysis.market_structure import analyze_market_structure
 from analysis.report_engine import generate_market_report
+from analysis.quant import full_quant_analysis
 
 from ui.colors import get_style
 from ui.formatters import format_price, format_percent, format_volume, colorize_text
