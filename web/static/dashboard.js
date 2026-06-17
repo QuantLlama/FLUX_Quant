@@ -78,8 +78,6 @@ function baseChartOpts(height) {
       borderColor:     'rgba(255,255,255,0.06)',
       timeVisible:     true,
       secondsVisible:  false,
-      fixLeftEdge:     true,
-      fixRightEdge:    true,
     },
     handleScroll: true,
     handleScale:  true,

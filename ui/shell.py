@@ -480,21 +480,34 @@ Bienvenido al motor interactivo de análisis de mercados.
             console.print(f"[bold red]Subcomando de chart desconocido: '{subcmd}'. Opciones: candles, rsi, macd[/bold red]")
 
     def cmd_dashboard(self, args: list[str]) -> None:
-        """Muestra el Dashboard consolidado en pantalla completa."""
-        if not self._check_data():
-            return
-            
-        report = generate_market_report(
-            self.session.df,
-            self.session.symbol,
-            self.session.timeframe,
-            self.session.capital,
-            self.session.risk_percent
-        )
-        display_dashboard(report, self.session.df)
-        # Esperar tecla del usuario para salir del dashboard
-        input("\n[Presiona Enter para volver a la línea de comandos]")
-        os.system("clear" if os.name == "posix" else "cls")
+        """Muestra el Dashboard Web Profesional en el navegador."""
+        import webbrowser
+        import urllib.request
+        import time
+        import subprocess
+
+        url = "http://127.0.0.1:8555"
+        console.print("[bold green]Abriendo Dashboard Web Profesional...[/bold green]")
+
+        def is_server_running():
+            try:
+                urllib.request.urlopen(url, timeout=1)
+                return True
+            except Exception:
+                return False
+
+        if not is_server_running():
+            console.print("[yellow]Iniciando servidor web en segundo plano...[/yellow]")
+            # Iniciar el proceso de uvicorn en segundo plano
+            subprocess.Popen([sys.executable, "main.py", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Esperar a que levante
+            for _ in range(10):
+                time.sleep(0.5)
+                if is_server_running():
+                    break
+
+        webbrowser.open(url)
+        console.print(f"[green]✓ Dashboard abierto en tu navegador: {url}[/green]")
 
     def cmd_report(self, args: list[str]) -> None:
         """Muestra un reporte técnico de texto estructurado y coloreado en consola."""
