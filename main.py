@@ -20,6 +20,8 @@ def check_dependencies() -> bool:
         "prompt_toolkit",
         "plotext",
         "toml",
+        "fastapi",
+        "uvicorn"
     ]
     
     missing = []
@@ -49,9 +51,14 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        from ui.shell import AnalysisShell
-        shell = AnalysisShell()
-        shell.run()
+        if len(sys.argv) > 1 and sys.argv[1].lower() == "web":
+            print("Iniciando Dashboard Web Profesional...")
+            import uvicorn
+            uvicorn.run("web.api:app", host="0.0.0.0", port=8555, reload=True)
+        else:
+            from ui.shell import AnalysisShell
+            shell = AnalysisShell()
+            shell.run()
     except Exception as e:
         logger.exception("Error fatal al iniciar la aplicación")
         print(f"\n❌ Error fatal de inicialización: {e}")
