@@ -232,12 +232,20 @@ class AnalysisShell:
         
         while True:
             try:
-                # Solicitar comando al usuario
-                user_input = self.prompt_session.prompt(
-                    self.get_prompt_message(),
-                    style=self.prompt_style if not ("WINEPREFIX" in os.environ or "WINELOADERNOEXEC" in os.environ) else None,
-                    completer=self.completer
-                )
+                is_wine = sys.platform == "win32" and ("WINEPREFIX" in os.environ or "WINELOADERNOEXEC" in os.environ)
+                
+                if is_wine:
+                    # Fallback robusto para Wine: Evita todo prompt_toolkit y VT100
+                    prompt_str = f"FLUXQuant@{self.session.symbol or 'NINGUNO'}:{self.session.timeframe or 'N/A'} > "
+                    # print() para separar del output anterior si es necesario
+                    user_input = input(prompt_str)
+                else:
+                    # Solicitar comando al usuario nativamente
+                    user_input = self.prompt_session.prompt(
+                        self.get_prompt_message(),
+                        style=self.prompt_style,
+                        completer=self.completer
+                    )
                 
                 # Limpiar espacios
                 user_input = user_input.strip()
