@@ -191,22 +191,9 @@ FLUX_Quant/
 
 ## ⚙️ Instalación y Configuración
 
-### Requisitos Previos
+### Instalación Automática Universal (Recomendada)
 
-| Requisito | Versión Mínima | Cómo verificar |
-|---|---|---|
-| **Python** | 3.10 | `python --version` |
-| **pip** | 23+ | `pip --version` |
-| **Git** | cualquiera | `git --version` |
-| **Conexión a Internet** | — | Para descargar datos de Binance/Yahoo Finance |
-
-> ⚠️ El sistema fue desarrollado y probado en Python **3.10, 3.11 y 3.12**. No se garantiza compatibilidad con Python 3.9 o inferior.
-
----
-
-### 🐧 Linux / macOS
-
-#### Opción A — Script Automático (Recomendado)
+Hemos unificado la instalación para Windows, Linux y macOS en un solo comando:
 
 ```bash
 # 1. Clonar el repositorio
