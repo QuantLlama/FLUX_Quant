@@ -90,6 +90,16 @@ def extract_signal(source: str, results: dict) -> tuple[str, float]:
     elif source == "manual":
         side = results.get("side", "NEUTRAL").upper()
         return side if side in ("BUY", "SELL") else "NEUTRAL", 1.0
+        
+    elif source == "report":
+        direction = results.get("direction", "NEUTRAL")
+        score = max(results.get("score_buy", 0), results.get("score_sell", 0))
+        confidence = min(score / 100.0, 1.0)
+        if "COMPRA" in direction:
+            return "BUY", confidence
+        elif "VENTA" in direction:
+            return "SELL", confidence
+        return "NEUTRAL", 0.0
 
     return "NEUTRAL", 0.0
 
@@ -117,29 +127,40 @@ def build_order(
 
     entry = entry_price if entry_price and order_type == "LIMIT" else current_price
 
-    # Calculate ATR for SL distance
-    if len(df) > 14:
-        high_low = df['High'] - df['Low']
-        high_close = (df['High'] - df['Close'].shift()).abs()
-        low_close = (df['Low'] - df['Close'].shift()).abs()
-        ranges = pd.concat([high_low, high_close, low_close], axis=1)
-        true_range = np.max(ranges, axis=1)
-        atr = true_range.rolling(14).mean().iloc[-1]
+    if source == "report" and "setup" in analysis_results and analysis_results["setup"].get("stop_loss", 0.0) > 0:
+        setup = analysis_results["setup"]
+        sl = float(setup["stop_loss"])
+        sl_dist = abs(entry - sl)
+        if side == "BUY":
+            tp1 = entry + (sl_dist * rr_ratio)
+            tp2 = entry + (sl_dist * rr_ratio * 1.5)
+        else:
+            tp1 = entry - (sl_dist * rr_ratio)
+            tp2 = entry - (sl_dist * rr_ratio * 1.5)
     else:
-        # Fallback if not enough data: 1% of price
-        atr = entry * 0.01
+        # Calculate ATR for SL distance
+        if len(df) > 14:
+            high_low = df['High'] - df['Low']
+            high_close = (df['High'] - df['Close'].shift()).abs()
+            low_close = (df['Low'] - df['Close'].shift()).abs()
+            ranges = pd.concat([high_low, high_close, low_close], axis=1)
+            true_range = np.max(ranges, axis=1)
+            atr = true_range.rolling(14).mean().iloc[-1]
+        else:
+            # Fallback if not enough data: 1% of price
+            atr = entry * 0.01
 
-    atr_mult = config.get("volatility.atr_sl_multiplier", 2.0)
-    sl_dist = atr * atr_mult
+        atr_mult = config.get("volatility.atr_sl_multiplier", 2.0)
+        sl_dist = atr * atr_mult
 
-    if side == "BUY":
-        sl = entry - sl_dist
-        tp1 = entry + (sl_dist * rr_ratio)
-        tp2 = entry + (sl_dist * rr_ratio * 1.5)
-    else: # SELL
-        sl = entry + sl_dist
-        tp1 = entry - (sl_dist * rr_ratio)
-        tp2 = entry - (sl_dist * rr_ratio * 1.5)
+        if side == "BUY":
+            sl = entry - sl_dist
+            tp1 = entry + (sl_dist * rr_ratio)
+            tp2 = entry + (sl_dist * rr_ratio * 1.5)
+        else: # SELL
+            sl = entry + sl_dist
+            tp1 = entry - (sl_dist * rr_ratio)
+            tp2 = entry - (sl_dist * rr_ratio * 1.5)
 
     risk_usd = capital * (risk_pct / 100.0)
     
