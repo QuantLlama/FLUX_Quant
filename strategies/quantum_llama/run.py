@@ -240,9 +240,27 @@ import json
 import os
 
 PORT = 8000
-CONFIG_PATH = "config/live_config.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(BASE_DIR, "config", "live_config.json")
 
 class CustomHandler(http.server.SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        import posixpath
+        import urllib
+        parsed = urllib.parse.urlparse(path)
+        path_clean = posixpath.normpath(urllib.parse.unquote(parsed.path))
+        
+        # Route requests starting with /live/ to absolute quantum_llama/live/
+        if path_clean.startswith('/live/') or path_clean == '/live':
+            relative_part = path_clean[6:] if path_clean.startswith('/live/') else ""
+            return os.path.join(BASE_DIR, 'live', relative_part)
+            
+        # Route live_status.json requests to absolute quantum_llama/live_status.json
+        if path_clean == '/live_status.json':
+            return os.path.join(BASE_DIR, 'live_status.json')
+            
+        return super().translate_path(path)
+
     def do_GET(self):
         if self.path == '/config':
             self.send_response(200)
@@ -281,17 +299,27 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         return # Suppress logs
 
-def start_server():
-    """Starts a custom HTTP server in a daemon thread"""
+httpd_server = None
+for port in range(8000, 8040):
     try:
-        with socketserver.TCPServer(("", PORT), CustomHandler) as httpd:
-            httpd.serve_forever()
+        socketserver.TCPServer.allow_reuse_address = True
+        httpd_server = socketserver.TCPServer(("", port), CustomHandler)
+        PORT = port
+        break
     except OSError:
-        pass
+        continue
 
-# Start server on module load
-server_thread = threading.Thread(target=start_server, daemon=True)
-server_thread.start()
+def start_server():
+    """Starts the custom HTTP server"""
+    if httpd_server:
+        try:
+            httpd_server.serve_forever()
+        except Exception:
+            pass
+
+if httpd_server:
+    server_thread = threading.Thread(target=start_server, daemon=True)
+    server_thread.start()
 
 def main():
     show_header()
@@ -359,9 +387,8 @@ def main():
             # Select Volume
             volume = select_volume()
             
-            # Open Live Dashboard via file:// protocol
-            dashboard_path = os.path.abspath("live/live_dashboard.html")
-            dashboard_url = f"file://{dashboard_path}"
+            # Open Live Dashboard via http://localhost:8000/live/live_dashboard.html
+            dashboard_url = f"http://localhost:{PORT}/live/live_dashboard.html"
             console.print(f"[green]✓ Abriendo Dashboard de Trading en Vivo local:[/green] [bold cyan]{dashboard_url}[/bold cyan]")
             console.print("[dim]Si tu navegador no se abre automáticamente, puedes hacer Ctrl+Click en el enlace superior.[/dim]")
             webbrowser.open(dashboard_url)

@@ -7,7 +7,7 @@
     <title>FLUX QUANTUM GAN - Live Trading</title>
     <link rel="icon" href="https://llamaia.nbmsystemas.com/llama-logo.png" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lightweight-charts@5.0.0/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root {
             --bg-color: #050810;
@@ -483,6 +483,12 @@
     </div>
 
     <script>
+        // Verificar protocolo para evitar bloqueos de CORS en file://
+        if (window.location.protocol === 'file:') {
+            console.warn("Abierto con protocolo file://. Redirigiendo a localhost...");
+            window.location.href = 'http://localhost:8000/live/live_dashboard.html';
+        }
+
         // Initialize Chart
         const chartContainer = document.getElementById('chart-container');
         const chart = LightweightCharts.createChart(chartContainer, {
@@ -502,7 +508,7 @@
             },
         });
 
-        const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+        const candleSeries = chart.addCandlestickSeries({
             upColor: '#10b981',
             downColor: '#ef4444',
             borderVisible: false,
@@ -619,7 +625,7 @@
 
                 // Update Chart
                 const chartData = data.last_candles.map(c => ({
-                    time: new Date(c.time).getTime() / 1000,
+                    time: typeof c.time === 'number' ? c.time : new Date(c.time).getTime() / 1000,
                     open: c.Open,
                     high: c.High,
                     low: c.Low,

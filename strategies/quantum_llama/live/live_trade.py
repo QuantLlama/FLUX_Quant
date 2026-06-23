@@ -135,7 +135,8 @@ def run_live_trading(sys_ticker, asset_type, platform="mt5", timeframe=None, ini
     try:
         while True:
             # 1. Reload Config
-            config_path = "config/live_config.json"
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(base_dir, "config", "live_config.json")
             config = {
                 "automation_enabled": False,
                 "volume": initial_volume,
@@ -365,7 +366,13 @@ def run_live_trading(sys_ticker, asset_type, platform="mt5", timeframe=None, ini
                         "entry_price": float(entry_price),
                         "sl_price": round(float(sl_price), 2),
                         "tp_price": round(float(tp_price), 2),
-                        "last_candles": df.tail(50).to_dict(orient='records'),
+                        "last_candles": [
+                            {
+                                **c,
+                                "time": int(pd.Timestamp(c["time"]).timestamp())
+                            }
+                            for c in df.tail(50).to_dict(orient='records')
+                        ],
                         "account": {
                             "balance": float(current_balance),
                             "equity": float(current_equity),
@@ -380,7 +387,10 @@ def run_live_trading(sys_ticker, asset_type, platform="mt5", timeframe=None, ini
                         "validation": validation_msg
                     }
                     
-                    with open("live_status.json", "w") as f:
+                    # Guardar en ruta absoluta para que coincida con el servidor local
+                    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                    status_path = os.path.join(base_dir, "live_status.json")
+                    with open(status_path, "w") as f:
                         json.dump(status, f, default=str)
                         
                     console.print(f"P: {current_price:.2f} | S: {signal} | PnL: {daily_pnl:.2f} | Valid: {validation_msg}")
