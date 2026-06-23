@@ -424,13 +424,133 @@ function renderSetupCard(data) {
     ${row('Stop Loss', fmt2(s.stop_loss), 'down')}
     ${row('TP 1', fmt2(s.take_profit_1), 'up')}
     ${row('TP 2', fmt2(s.take_profit_2), 'up')}
-    ${row('Tamaño pos.', s.position_size ?? '—')}
-    ${row('Pérdida máx.', s.max_loss_usd ? '$'+fmt.format(s.max_loss_usd) : '—', 'down')}
+    ${row('Tamaño pos.', s.tamano_posicion !== undefined ? `${s.tamano_posicion} ${s.position_unit || 'unidades'}` : '—')}
+    ${row('Pérdida máx.', s.riesgo_dinero ? '$'+fmt.format(s.riesgo_dinero) : '—', 'down')}
     ${row('R:R', s.rr_tp1 ? `${s.rr_tp1} / ${s.rr_tp2}` : '—', 'accent')}
   `;
+
+  // Sync order execution panel
+  updateOrderPanel(data);
+}
+
+// ─── Order Execution Panel ──────────────────────────────────────────────────
+
+// Current order metadata (updated each time analysis loads)
+const orderCtx = {
+  pointValue: 1.0,
+  unit: 'unidades',
+  symbol: '',
+  direction: 'NEUTRAL',
+};
+
+function updateOrderPanel(data) {
+  const s   = data.setup || {};
+  const dir = data.direction || 'NEUTRAL';
+
+  orderCtx.symbol     = data.symbol || state.symbol;
+  orderCtx.direction  = dir;
+  orderCtx.unit       = s.position_unit || 'unidades';
+  orderCtx.pointValue = s.point_value   || 1.0;
+
+  // Direction badge
+  const badge = document.getElementById('order-direction-badge');
+  badge.textContent = dir;
+  badge.className   = `signal-badge ${dir === 'COMPRA' ? 'buy' : dir === 'VENTA' ? 'sell' : 'neutral'}`;
+
+  // Size label & unit badge
+  const unitLabels = { contratos: 'Contratos', lotes: 'Lotes', acciones: 'Acciones', unidades: 'Unidades' };
+  document.getElementById('order-size-label').textContent = unitLabels[orderCtx.unit] || 'Tamaño';
+  document.getElementById('order-size-unit').textContent  = orderCtx.unit;
+  document.getElementById('order-size').value = s.tamano_posicion ?? 0;
+
+  // Levels
+  document.getElementById('order-entry').value = s.entrada       ?? 0;
+  document.getElementById('order-sl').value    = s.stop_loss     ?? 0;
+  document.getElementById('order-tp1').value   = s.take_profit_1 ?? 0;
+  document.getElementById('order-tp2').value   = s.take_profit_2 ?? 0;
+
+  recalcOrderRisk();
+
+  // Clear previous feedback
+  const fb = document.getElementById('order-feedback');
+  fb.className   = 'order-feedback hidden';
+  fb.textContent = '';
+}
+
+function recalcOrderRisk() {
+  const size  = parseFloat(document.getElementById('order-size').value)  || 0;
+  const entry = parseFloat(document.getElementById('order-entry').value) || 0;
+  const sl    = parseFloat(document.getElementById('order-sl').value)    || 0;
+
+  let riskUsd = 0;
+  let nominal = 0;
+
+  if (entry > 0 && sl > 0 && size > 0) {
+    const riskDist = Math.abs(entry - sl);
+    if (orderCtx.unit === 'contratos') {
+      riskUsd = riskDist * orderCtx.pointValue * size;
+      nominal = entry * size;
+    } else if (orderCtx.unit === 'lotes') {
+      riskUsd = riskDist * 100_000 * size;
+      nominal = entry * 100_000 * size;
+    } else {
+      riskUsd = riskDist * size;
+      nominal = entry * size;
+    }
+  }
+
+  const fmtUsd = v => v ? '$' + fmt.format(v) : '—';
+  document.getElementById('order-risk-usd').textContent = fmtUsd(riskUsd);
+  document.getElementById('order-nominal').textContent  = fmtUsd(nominal);
+}
+
+async function sendOrder(side) {
+  const fb = document.getElementById('order-feedback');
+  fb.className   = 'order-feedback order-feedback--info';
+  fb.textContent = 'Enviando…';
+  fb.classList.remove('hidden');
+
+  const payload = {
+    symbol: orderCtx.symbol,
+    side,
+    size:   parseFloat(document.getElementById('order-size').value)  || 0,
+    unit:   orderCtx.unit,
+    entry:  parseFloat(document.getElementById('order-entry').value) || null,
+    sl:     parseFloat(document.getElementById('order-sl').value)    || null,
+    tp1:    parseFloat(document.getElementById('order-tp1').value)   || null,
+    tp2:    parseFloat(document.getElementById('order-tp2').value)   || null,
+  };
+
+  try {
+    const res  = await fetch('/api/orders/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (res.ok) {
+      fb.className   = 'order-feedback order-feedback--ok';
+      fb.textContent = `✓ Orden ${side} enviada. ${json.message || ''}`;
+    } else {
+      fb.className   = 'order-feedback order-feedback--err';
+      fb.textContent = `✗ Error: ${json.detail || json.message || res.statusText}`;
+    }
+  } catch (err) {
+    fb.className   = 'order-feedback order-feedback--err';
+    fb.textContent = `✗ Sin conexión al broker: ${err.message}`;
+  }
+}
+
+function bindOrderPanel() {
+  ['order-size', 'order-entry', 'order-sl'].forEach(id => {
+    document.getElementById(id).addEventListener('input', recalcOrderRisk);
+  });
+  document.getElementById('btn-order-buy').addEventListener('click',  () => sendOrder('BUY'));
+  document.getElementById('btn-order-sell').addEventListener('click', () => sendOrder('SELL'));
 }
 
 function renderQuantCard(data) {
+
   const q = data.quant || {};
   if (!q.direction || q.error) {
     document.getElementById('quant-body').innerHTML = '<div style="color:var(--text-muted);font-size:11px">Datos insuficientes o error en Quant</div>';
@@ -637,6 +757,9 @@ function bindEvents() {
     renderWatchlist();
     loadAll();
   });
+
+  // Bind order panel
+  bindOrderPanel();
 
   // Auto-recargar al cambiar comboboxes
   ['sel-tf', 'sel-period'].forEach(id => {

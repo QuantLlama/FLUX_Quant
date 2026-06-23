@@ -140,11 +140,16 @@ def volatility_percentile(df: pd.DataFrame, period: int = 252) -> dict:
         "MUY ALTA"
     )
 
+    recent_mean = recent.mean()
+    recent_std  = recent.std()
+    z_score = float((current_atr_pct - recent_mean) / recent_std) if recent_std > 0 else 0.0
+
     return {
         "current_atr_pct": round(current_atr_pct, 3),
         "percentile_rank": pct_rank,
         "regime": vol_regime,
-        "description": f"Volatilidad en percentil {pct_rank} — Régimen: {vol_regime}",
+        "z_score": round(z_score, 3),
+        "description": f"Volatilidad en percentil {pct_rank} — Régimen: {vol_regime} (Z: {z_score:.2f})",
     }
 
 

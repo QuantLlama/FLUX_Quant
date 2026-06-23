@@ -207,6 +207,65 @@
       </div>
     </div>
 
+    <!-- Tarjeta: Envío de Orden -->
+    <div class="card card--order" id="card-order-exec">
+      <div class="card__header" style="color:var(--cyan);border-bottom:1px solid var(--accent-soft);">
+        🚀 ENVÍO DE ORDEN
+      </div>
+      <div class="card__body" id="order-exec-body">
+
+        <!-- Dirección -->
+        <div class="data-row" style="margin-bottom:10px">
+          <span class="data-row__label">Dirección</span>
+          <span id="order-direction-badge" class="signal-badge neutral">—</span>
+        </div>
+
+        <!-- Tamaño / Contratos editable -->
+        <div class="order-field-group">
+          <label class="order-field-label" id="order-size-label">Tamaño</label>
+          <div class="order-field-row">
+            <input id="order-size" class="order-input" type="number" min="0" step="any" value="0" />
+            <span id="order-size-unit" class="order-unit-badge">unidades</span>
+          </div>
+          <div class="order-field-hint" id="order-size-hint">Calculado por riesgo. Editá según tu criterio.</div>
+        </div>
+
+        <!-- Entrada / SL / TP -->
+        <div class="order-levels-grid">
+          <div class="order-level-item">
+            <span class="order-level-label">Entrada</span>
+            <input id="order-entry" class="order-input order-input--sm" type="number" step="any" value="0" />
+          </div>
+          <div class="order-level-item">
+            <span class="order-level-label" style="color:var(--red)">Stop Loss</span>
+            <input id="order-sl" class="order-input order-input--sm" type="number" step="any" value="0" />
+          </div>
+          <div class="order-level-item">
+            <span class="order-level-label" style="color:var(--green)">Take Profit 1</span>
+            <input id="order-tp1" class="order-input order-input--sm" type="number" step="any" value="0" />
+          </div>
+          <div class="order-level-item">
+            <span class="order-level-label" style="color:var(--green)">Take Profit 2</span>
+            <input id="order-tp2" class="order-input order-input--sm" type="number" step="any" value="0" />
+          </div>
+        </div>
+
+        <!-- Riesgo calculado en vivo -->
+        <div class="order-risk-summary" id="order-risk-summary">
+          <span>Riesgo: <strong id="order-risk-usd">—</strong></span>
+          <span>Valor nominal: <strong id="order-nominal">—</strong></span>
+        </div>
+
+        <!-- Botones -->
+        <div class="order-btn-row">
+          <button id="btn-order-buy"  class="btn-order btn-order--buy">▲ COMPRAR</button>
+          <button id="btn-order-sell" class="btn-order btn-order--sell">▼ VENDER</button>
+        </div>
+
+        <div id="order-feedback" class="order-feedback hidden"></div>
+      </div>
+    </div>
+
   </aside>
 
 </main>

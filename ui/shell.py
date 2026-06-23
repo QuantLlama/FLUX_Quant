@@ -954,6 +954,14 @@ class AnalysisShell:
                 console.print("[yellow]El análisis actual no generó una señal clara o confiable.[/yellow]")
                 return
                 
+            try:
+                # El order_builder ya calculó el tamaño óptimo (lots/contratos) según el riesgo
+                size_input = console.input(f"Tamaño de orden (Contratos/Lotes/Unidades) [{spec.lots}]: ")
+                if size_input.strip():
+                    spec.lots = float(size_input.replace(',', '.'))
+            except ValueError:
+                console.print(f"[red]Valor inválido, usando el sugerido por riesgo: {spec.lots}[/red]")
+                
             # Mostrar resumen
             table = Table(title="📋 Confirmación de Orden")
             table.add_column("Parámetro", style="cyan")
@@ -974,7 +982,8 @@ class AnalysisShell:
             if spec.tp2:
                 table.add_row("Take Profit 2", f"[dim green]{format_price(spec.tp2)}[/dim green]")
                 
-            table.add_row("Tamaño (USD)", f"${spec.size_usd:.2f}")
+            table.add_row("Tamaño (Cant.)", f"[bold]{spec.lots}[/bold]")
+            table.add_row("Tamaño (Riesgo ref. USD)", f"${spec.size_usd:.2f}")
             table.add_row("Señal", spec.notes)
             
             mode = order_executor.mode

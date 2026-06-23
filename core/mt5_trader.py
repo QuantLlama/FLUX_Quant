@@ -12,6 +12,13 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
+def _round_to_tick(price: float, tick_size: float) -> float:
+    """Round price to the nearest valid tick for the instrument."""
+    if tick_size <= 0:
+        return price
+    return round(round(price / tick_size) * tick_size, 10)
+
 def send_mt5_order(spec: OrderSpec, paper: bool = True) -> dict:
     """
     Sends an order to MetaTrader 5.
@@ -56,9 +63,41 @@ def send_mt5_order(spec: OrderSpec, paper: bool = True) -> dict:
         if not tick:
             return {"ok": False, "error": f"Sin ticks para {selected_symbol}"}
 
+        tick_size = symbol_info.trade_tick_size or symbol_info.point
+
         price = tick.ask if spec.side == "BUY" else tick.bid
         if spec.order_type == "LIMIT" and spec.entry_price:
             price = spec.entry_price
+
+        # Round all prices to the instrument's tick size.
+        # MT5 rejects orders (10016) if SL/TP don't align to the tick grid.
+        price = _round_to_tick(price, tick_size)
+        sl    = _round_to_tick(spec.sl, tick_size)
+        tp1   = _round_to_tick(spec.tp1, tick_size)
+
+        # Validate SL/TP respect broker's minimum stop level
+        stops_level = symbol_info.trade_stops_level  # minimum distance in points
+        point = symbol_info.point
+        min_stop_distance = stops_level * point
+        if min_stop_distance > 0:
+            sl_distance = abs(price - spec.sl)
+            tp_distance = abs(price - spec.tp1)
+            if sl_distance < min_stop_distance:
+                return {
+                    "ok": False,
+                    "error": (
+                        f"SL demasiado cercano al precio: distancia={sl_distance:.5f}, "
+                        f"mínimo requerido={min_stop_distance:.5f} ({stops_level} puntos)"
+                    ),
+                }
+            if tp_distance < min_stop_distance:
+                return {
+                    "ok": False,
+                    "error": (
+                        f"TP demasiado cercano al precio: distancia={tp_distance:.5f}, "
+                        f"mínimo requerido={min_stop_distance:.5f} ({stops_level} puntos)"
+                    ),
+                }
 
         contract_size = symbol_info.trade_contract_size if symbol_info.trade_contract_size else 1.0
         
@@ -89,13 +128,14 @@ def send_mt5_order(spec: OrderSpec, paper: bool = True) -> dict:
             "volume": float(lots),
             "type": order_type,
             "price": float(price),
-            "sl": float(spec.sl),
-            "tp": float(spec.tp1),
+            "sl": float(sl),
+            "tp": float(tp1),
             "deviation": 20,
             "magic": 234000,
             "comment": "FLUXQuant",
             "type_time": mt5.ORDER_TIME_GTC,
-            "type_filling": mt5.ORDER_FILLING_IOC,
+            # LIMIT/STOP orders must use RETURN filling; IOC is for MARKET only
+            "type_filling": mt5.ORDER_FILLING_IOC if spec.order_type == "MARKET" else mt5.ORDER_FILLING_RETURN,
         }
 
         result = mt5.order_send(request)

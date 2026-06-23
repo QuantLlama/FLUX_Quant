@@ -205,7 +205,8 @@ def get_analysis(
     """
     df, info = _fetch_or_404(symbol, timeframe, period)
 
-    report   = generate_market_report(df, symbol.upper(), timeframe, capital, risk)
+    asset_type = info.get("type", "Acción/ETF")
+    report   = generate_market_report(df, symbol.upper(), timeframe, capital, risk, asset_type)
     results  = report["results"]
     vol_res  = results.get("volatility", {})
     sr_res   = results.get("sr", {})
@@ -259,7 +260,13 @@ def get_analysis(
         "direction": report.get("direction"),
         "score_buy": _safe(report.get("score_buy")),
         "score_sell":_safe(report.get("score_sell")),
-        "setup":     report.get("setup", {}),
+        "setup":     {
+            **report.get("setup", {}),
+            # Ensure position sizing fields are always present
+            "position_unit": report.get("setup", {}).get("position_unit", "unidades"),
+            "point_value":   report.get("setup", {}).get("point_value", 1.0),
+            "market_type":   asset_type,
+        },
         "market_structure": {
             "trend":      ms_res.get("trend", "neutral"),
             "last_bos":   ms_res.get("last_bos"),
@@ -314,6 +321,109 @@ def scan_watchlist(
             logger.warning(f"Error escaneando {sym}: {e}")
             results.append({"symbol": sym, "error": str(e)})
     return {"results": results}
+
+
+# ─────────────────────────────────────────────────────────────
+# Order execution
+# ─────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel
+from typing import Optional as Opt
+
+class OrderRequest(BaseModel):
+    symbol: str
+    side: str           # "BUY" | "SELL"
+    size: float         # quantity in whatever unit the UI calculated
+    unit: str           # "contratos" | "lotes" | "acciones" | "unidades"
+    entry: Opt[float] = None
+    sl:    Opt[float] = None
+    tp1:   Opt[float] = None
+    tp2:   Opt[float] = None
+
+
+@app.post("/api/orders/send")
+def send_order(req: OrderRequest):
+    """
+    Routes an order to the appropriate broker based on symbol type.
+    MT5 for forex/futures/stocks; Binance for crypto; simulation fallback.
+    """
+    sym = req.symbol.upper()
+    asset_type = _provider._detect_type(sym)
+    logger.info(f"Order request: {req.side} {req.size} {req.unit} of {sym} [{asset_type}]")
+
+    # ── MetaTrader 5 path (forex, futures, stocks/CFDs) ──
+    if asset_type in ("Forex", "Futuros/Commodities", "Acción/ETF", "Índice"):
+        try:
+            from core.mt5_trader import MT5Trader
+            from core.order_builder import OrderSpec
+            trader = MT5Trader()
+            spec = OrderSpec(
+                symbol=sym,
+                side=req.side,
+                order_type="MARKET",
+                entry_price=req.entry,
+                sl=req.sl or 0.0,
+                tp1=req.tp1 or 0.0,
+                tp2=req.tp2,
+                size_usd=0.0,  # not used; we already have lots
+                lots=req.size if req.unit == "contratos" else None,
+                source="manual",
+                confidence=1.0,
+                rr=0.0,
+                notes=f"Manual order from dashboard: {req.size} {req.unit}",
+            )
+            result = trader.execute(spec)
+            if result.get("status") == "filled":
+                return {"ok": True, "message": f"MT5: ticket #{result.get('ticket')}"}
+            return JSONResponse(status_code=400, content={"detail": f"MT5 error: {result.get('error', 'unknown')}"})
+        except ImportError:
+            pass  # MT5 not available, fall through to simulation
+        except Exception as e:
+            logger.error(f"MT5 order error: {e}")
+            return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    # ── Binance path (crypto) ──
+    if asset_type == "Crypto":
+        try:
+            from core.binance_trader import BinanceTrader
+            from core.order_builder import OrderSpec
+            trader = BinanceTrader()
+            spec = OrderSpec(
+                symbol=sym,
+                side=req.side,
+                order_type="MARKET",
+                entry_price=req.entry,
+                sl=req.sl or 0.0,
+                tp1=req.tp1 or 0.0,
+                tp2=req.tp2,
+                size_usd=0.0,
+                lots=req.size,
+                source="manual",
+                confidence=1.0,
+                rr=0.0,
+                notes=f"Manual order: {req.size} {req.unit}",
+            )
+            result = trader.execute(spec)
+            if result.get("status") == "filled":
+                return {"ok": True, "message": f"Binance: order {result.get('orderId')}"}
+            return JSONResponse(status_code=400, content={"detail": f"Binance error: {result.get('error', 'unknown')}"})
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.error(f"Binance order error: {e}")
+            return JSONResponse(status_code=500, content={"detail": str(e)})
+
+    # ── Simulation fallback (no broker connected) ──
+    logger.warning(f"No broker available for {sym}; simulating order.")
+    return {
+        "ok": True,
+        "simulated": True,
+        "message": (
+            f"[SIM] {req.side} {req.size} {req.unit} {sym} "
+            f"@ entry={req.entry} SL={req.sl} TP1={req.tp1}. "
+            "Conectá MT5 o Binance para ejecución real."
+        ),
+    }
 
 
 # ─────────────────────────────────────────────────────────────

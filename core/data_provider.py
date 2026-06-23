@@ -309,8 +309,14 @@ class DataProvider:
             return "Índice"
         if "-USD" in s or "-BTC" in s or "-ETH" in s:
             return "Crypto"
+            
+        # MT5 Futures heuristics (MESU26, MNQZ25, etc.)
+        futures_prefixes = ("MES", "ES", "MNQ", "NQ", "MYM", "YM", "RTY", "M2K", "CL", "GC", "SI", "ZN", "ZB")
+        for pref in futures_prefixes:
+            if s.startswith(pref) and any(char.isdigit() for char in s):
+                return "Futuros/Commodities"
+                
         return "Acción/ETF"
-
 
 # Instancia global
 data_provider = DataProvider()

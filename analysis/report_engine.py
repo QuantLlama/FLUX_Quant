@@ -26,8 +26,9 @@ from analysis.market_structure import analyze_market_structure
 from analysis.quant import full_quant_analysis
 from analysis.mean_reversion import full_mean_reversion_analysis
 
-logger = get_logger(__name__)
+from core.order_builder import _calc_position_size
 
+logger = get_logger(__name__)
 
 def generate_market_report(
     df: pd.DataFrame,
@@ -35,6 +36,7 @@ def generate_market_report(
     timeframe: str,
     capital: float = 10000.0,
     risk_percent: float = 1.0,
+    asset_type: str = "Acción/ETF",
 ) -> dict:
     """
     Ejecuta todos los motores de análisis y consolida un reporte final
@@ -48,6 +50,9 @@ def generate_market_report(
             "status": "error",
             "message": "Datos insuficientes (se requieren al menos 50 filas)",
         }
+
+    # Override asset_type with dataframe metadata if available
+    asset_type = df.attrs.get("asset_type", asset_type)
 
     logger.info(f"Iniciando análisis consolidado para {symbol} [{timeframe}]...")
 
@@ -288,10 +293,12 @@ def generate_market_report(
         reward_dist_1 = tp1 - entry
         reward_dist_2 = tp2 - entry
         
-        # Calcular tamaño de la posición
+        # Calcular tamaño de la posición según tipo de mercado
         risk_cash = capital * (risk_percent / 100)
-        position_size = risk_cash / risk_dist if risk_dist > 0 else 0
-        
+        position_size, position_unit, point_value = _calc_position_size(
+            risk_cash, risk_dist, entry, asset_type, symbol
+        )
+
         setup = {
             "direccion": "COMPRA (Largo)",
             "entrada": round(entry, 4),
@@ -302,6 +309,9 @@ def generate_market_report(
             "rr_tp2": round(reward_dist_2 / risk_dist, 2) if risk_dist > 0 else 0,
             "riesgo_dinero": round(risk_cash, 2),
             "tamano_posicion": round(position_size, 4),
+            "position_unit": position_unit,
+            "point_value": point_value,
+            "market_type": asset_type,
             "valor_nominal": round(position_size * entry, 2),
             "justificacion": confluences_buy[:4],
         }
@@ -323,7 +333,9 @@ def generate_market_report(
         reward_dist_2 = entry - tp2
         
         risk_cash = capital * (risk_percent / 100)
-        position_size = risk_cash / risk_dist if risk_dist > 0 else 0
+        position_size, position_unit, point_value = _calc_position_size(
+            risk_cash, risk_dist, entry, asset_type, symbol
+        )
 
         setup = {
             "direccion": "VENTA (Corto)",
@@ -335,6 +347,9 @@ def generate_market_report(
             "rr_tp2": round(reward_dist_2 / risk_dist, 2) if risk_dist > 0 else 0,
             "riesgo_dinero": round(risk_cash, 2),
             "tamano_posicion": round(position_size, 4),
+            "position_unit": position_unit,
+            "point_value": point_value,
+            "market_type": asset_type,
             "valor_nominal": round(position_size * entry, 2),
             "justificacion": confluences_sell[:4],
         }
@@ -349,6 +364,9 @@ def generate_market_report(
             "rr_tp2": 0.0,
             "riesgo_dinero": 0.0,
             "tamano_posicion": 0.0,
+            "position_unit": "unidades",
+            "point_value": 1.0,
+            "market_type": asset_type,
             "valor_nominal": 0.0,
             "justificacion": ["Momentum indeciso", "Falta de confluencias de soporte o resistencia robustos"],
         }

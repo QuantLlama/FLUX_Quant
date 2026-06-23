@@ -283,7 +283,8 @@ def make_risk_setup_panel(setup: dict) -> Panel:
         text.append(f"  • Riesgo asignado  : ", style="dim white")
         text.append(f"{format_price(setup.get('riesgo_dinero'))}\n", style="bold white")
         text.append(f"  • Tamaño de posición: ", style="dim white")
-        text.append(f"{setup.get('tamano_posicion')} unidades\n", style="bold white")
+        unit_str = setup.get('position_unit', 'unidades')
+        text.append(f"{setup.get('tamano_posicion')} {unit_str}\n", style="bold white")
         text.append(f"  • Valor nominal    : ", style="dim white")
         text.append(f"{format_price(setup.get('valor_nominal'))}\n\n", style="bold white")
     
