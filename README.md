@@ -133,7 +133,7 @@ El sistema está diseñado con una arquitectura desacoplada y sin estado por act
 ## 📁 Estructura del Proyecto
 
 ```
-AnalisisQuantActivos/
+FLUX_Quant/
 │
 ├── 📄 main.py                    # Punto de entrada · verifica deps · despacha CLI o Web
 ├── 📄 config.toml                # Configuración global parametrizable
@@ -210,8 +210,8 @@ Hemos unificado la instalación para Windows, Linux y macOS en un solo comando:
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/QuantLlama/AnalisisQuantActivos.git
-cd AnalisisQuantActivos
+git clone https://github.com/QuantLlama/FLUX_Quant.git
+cd FLUX_Quant
 
 # 2. Ejecutar el instalador universal
 python install.py
