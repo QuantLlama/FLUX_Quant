@@ -101,6 +101,7 @@ class AnalysisShell:
                 "volatility": None,
                 "structure": None,
                 "quant": None,
+                "quantum_llama": None,
                 "reversion": None,
                 "all": None,
             },
@@ -151,12 +152,17 @@ class AnalysisShell:
                     "mt5": {"market": None, "limit": None},
                     "binance_spot": {"market": None, "limit": None},
                     "binance_futures": {"market": None, "limit": None},
+                    "ninjatrader": {"market": None, "limit": None},
                 },
                 "paper": {"on": None, "off": None},
                 "history": None,
                 "cancel": None,
                 "status": None,
                 "positions": None,
+            },
+            "strategy": {
+                "list": None,
+                "run": {"quantum_llama": None},
             }
         })
         
@@ -272,6 +278,7 @@ class AnalysisShell:
             "cache": self.cmd_cache,
             "export": self.cmd_export,
             "order": self.cmd_order,
+            "strategy": self.cmd_strategy,
         }
         
         func = cmd_map.get(cmd)
@@ -290,41 +297,61 @@ class AnalysisShell:
 
     def cmd_help(self, args: list[str]) -> None:
         """Muestra la documentación de comandos."""
-        help_text = """
-### Comandos Disponibles:
+        from rich.table import Table
+        from rich.panel import Panel
+        from rich.text import Text
 
-* **set symbol <TICKER>**       : Cambia el activo actual (ej: `set symbol AAPL`, `set symbol BTC-USDT`).
-* **set timeframe <TF>**        : Cambia el timeframe (ej: `set timeframe 4h`, `set timeframe 1d`).
-* **set period <PER>**          : Período de datos históricos (ej: `set period 1y`, `set period 3mo`).
-* **set capital <VALOR>**       : Cambia el tamaño de tu cuenta (ej: `set capital 100`).
-* **set risk <PORCENTAJE>**     : Cambia el riesgo por trade (ej: `set risk 1`).
-* **fetch**                     : Fuerza la descarga de datos históricos actualizados.
-* **test connections**          : Verifica conectividad con Binance y MetaTrader 5.
-* **dashboard**                 : Muestra el Dashboard multi-panel en tiempo real con gráfico.
-* **report**                    : Genera el reporte consolidado completo del mercado.
-* **chart candles**             : Dibuja un gráfico de velas japonesas en la terminal.
+        table = Table(title="Comandos de FLUX Quant", show_header=True, header_style="bold magenta", box=None, padding=(0, 2))
+        table.add_column("Comando", style="cyan", no_wrap=True)
+        table.add_column("Descripción", style="white")
 
-* **analyze <sr|volume|fib|gann|imbalance|volatility|structure|quant|reversion|all>** :
-  Ejecuta un motor de análisis técnico específico (ej. 'analyze quant' para AI Institucional).
+        # Configuración de Sesión
+        table.add_row("[bold yellow]⚙️ Configuración de Sesión[/bold yellow]", "")
+        table.add_row("set symbol <TICKER>", "Cambia el activo actual (ej: set symbol AAPL)")
+        table.add_row("set timeframe <TF>", "Cambia el timeframe (ej: set timeframe 4h)")
+        table.add_row("set period <PER>", "Período de datos históricos (ej: set period 1y)")
+        table.add_row("set capital <VALOR>", "Cambia el tamaño de cuenta (ej: set capital 1000)")
+        table.add_row("set risk <PORCENTAJE>", "Cambia el riesgo por trade (ej: set risk 1)")
+        table.add_row("config <show|save>", "Ver o persistir la configuración de parámetros")
+        table.add_row("", "")
 
-* **indicator <rsi|macd|bb|vwap|ema|sma|all>** :
-  Calcula e imprime indicadores matemáticos individuales.
+        # Datos y Conectividad
+        table.add_row("[bold yellow]📡 Datos y Conectividad[/bold yellow]", "")
+        table.add_row("fetch", "Fuerza la descarga de datos actualizados")
+        table.add_row("test connections", "Verifica conectividad con Binance y MT5")
+        table.add_row("cache <clear|status>", "Administra la caché de datos local")
+        table.add_row("", "")
 
-* **watchlist add <TICKER>**   : Agrega un activo a tu lista de seguimiento.
-* **watchlist defaults**        : Precarga una watchlist multi-mercado por defecto.
-* **watchlist scan**            : Escanea todos los activos en tu watchlist.
-* **watchlist show**            : Muestra los elementos en tu watchlist.
+        # Análisis Visual y Cuantitativo
+        table.add_row("[bold yellow]🔬 Análisis e Interfaces[/bold yellow]", "")
+        table.add_row("analyze <motor>", "Ejecuta un motor: sr, volume, fib, gann, imbalance, volatility, structure, quant, all")
+        table.add_row("indicator <nombre>", "Calcula indicadores: rsi, macd, bb, vwap, ema, sma, all")
+        table.add_row("dashboard", "Muestra el Dashboard multi-panel en tiempo real")
+        table.add_row("report", "Genera el reporte consolidado completo")
+        table.add_row("chart candles", "Dibuja un gráfico de velas en la terminal")
+        table.add_row("compare <T1> <T2>...", "Compara rendimiento y volatilidad de varios activos")
+        table.add_row("export <csv|report>", "Exporta datos técnicos a archivos locales")
+        table.add_row("", "")
 
-* **compare <TICKER1> <TICKER2>...** : Compara rendimiento y volatilidad de varios activos.
-* **order send [broker] [tipo]**  : Ejecuta una orden (ej: `order send mt5 market` o `order send binance_futures limit`)
-* **order paper <on|off>**      : Cambia el modo entre Paper Trading y Live Trading.
-* **order history**             : Muestra el historial de órdenes enviadas.
-* **order positions**           : Muestra las posiciones abiertas actuales en MT5 y Binance.
-* **config <show|save>**        : Ver o persistir la configuración de parámetros.
-* **cache <clear|status>**      : Administrar la caché de datos local.
-* **export <csv|report>**       : Exportar datos técnicos.
-        """
-        console.print(Markdown(help_text))
+        # Watchlist
+        table.add_row("[bold yellow]🗂️ Watchlists[/bold yellow]", "")
+        table.add_row("watchlist defaults", "Precarga una watchlist multi-mercado por defecto")
+        table.add_row("watchlist add <TICKER>", "Agrega un activo a tu lista de seguimiento")
+        table.add_row("watchlist scan", "Escanea todos los activos en tu watchlist")
+        table.add_row("watchlist show", "Muestra los elementos en tu watchlist")
+        table.add_row("", "")
+
+        # Estrategias y Ejecución
+        table.add_row("[bold yellow]🤖 Trading, Órdenes y Estrategias[/bold yellow]", "")
+        table.add_row("strategy list", "Lista todas las estrategias IA/externas instaladas")
+        table.add_row("strategy run <NOMBRE>", "Ejecuta una estrategia (ej: strategy run quantum_llama)")
+        table.add_row("order send <bkr> <tipo>", "Envía orden (ej: order send mt5 market)")
+        table.add_row("order paper <on|off>", "Alterna entre Paper Trading y Live Trading")
+        table.add_row("order history", "Muestra el historial de órdenes enviadas")
+        table.add_row("order positions", "Muestra las posiciones abiertas actuales")
+
+        panel = Panel(table, border_style="blue", title="[bold]Ayuda del Sistema[/bold]", padding=(1, 2), expand=False)
+        console.print(panel)
 
     def cmd_set(self, args: list[str]) -> None:
         """Establece parámetros de sesión (símbolo, timeframe, período, etc.)."""
@@ -615,8 +642,21 @@ class AnalysisShell:
 
         if not is_server_running():
             console.print("[yellow]Iniciando servidor web en segundo plano...[/yellow]")
-            # Iniciar el proceso de uvicorn en segundo plano
-            subprocess.Popen([sys.executable, "main.py", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # Iniciar el proceso de uvicorn en segundo plano usando el binario adecuado
+            import os
+            python_exe = sys.executable
+            if python_exe in ["/usr/bin/python3", "/usr/bin/python", "python3", "python"]:
+                home = os.path.expanduser("~")
+                candidates = [
+                    os.path.join(os.getcwd(), ".venv", "bin", "python"),
+                    os.path.join(home, ".venv_flux_quant", "bin", "python"),
+                    os.path.join(home, ".venv_analisis_activos", "bin", "python"),
+                ]
+                for candidate in candidates:
+                    if os.path.exists(candidate):
+                        python_exe = candidate
+                        break
+            subprocess.Popen([python_exe, "main.py", "web"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # Esperar a que levante
             for _ in range(10):
                 time.sleep(0.5)
@@ -846,10 +886,110 @@ class AnalysisShell:
                     f.write(f"  {k}: {v}\n")
             console.print(f"[green]✓ Reporte exportado a texto en: [bold]{filename.absolute()}[/bold][/green]")
 
-    def cmd_order(self, args: list[str]) -> None:
-        """Gestiona la ejecución de órdenes (MT5, Binance)."""
+    def cmd_strategy(self, args: list[str]) -> None:
+        """Gestiona las estrategias externas integradas en FLUX_Quant."""
         if not args:
-            console.print("[yellow]Uso: order <send|status|paper|history|cancel> ...[/yellow]")
+            console.print("[yellow]Uso: strategy <list|run> [nombre_estrategia][/yellow]")
+            return
+            
+        subcmd = args[0].lower()
+        strategies_dir = Path("strategies")
+        
+        if subcmd == "list":
+            if not strategies_dir.exists():
+                console.print("[red]El directorio 'strategies' no existe.[/red]")
+                return
+            
+            strats = [d.name for d in strategies_dir.iterdir() if d.is_dir() and not d.name.startswith("__")]
+            
+            if not strats:
+                console.print("[yellow]No hay estrategias instaladas.[/yellow]")
+                return
+                
+            table = Table(title="Estrategias Disponibles", box=ROUNDED)
+            table.add_column("Nombre", style="cyan bold")
+            table.add_column("Descripción", style="white")
+            table.add_column("Ruta", style="dim")
+            
+            import json
+            for s in strats:
+                strat_dir = strategies_dir / s
+                desc = "Sin descripción"
+                
+                manifest_file = strat_dir / "manifest.json"
+                if manifest_file.exists():
+                    try:
+                        with open(manifest_file, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            desc = data.get("description", desc)
+                    except:
+                        pass
+                else:
+                    # Fallback to reading first header of README.md if it exists
+                    readme_file = strat_dir / "README.md"
+                    if readme_file.exists():
+                        try:
+                            with open(readme_file, "r", encoding="utf-8") as f:
+                                for line in f:
+                                    if line.startswith("#"):
+                                        desc = line.lstrip("#").strip()
+                                        break
+                        except:
+                            pass
+                            
+                table.add_row(s, desc, f"strategies/{s}/")
+            console.print(table)
+            
+        elif subcmd == "run":
+            if len(args) < 2:
+                console.print("[red]Debes especificar el nombre de la estrategia. Ejemplo: strategy run quantum_llama[/red]")
+                return
+                
+            strat_name = args[1]
+            strat_path = strategies_dir / strat_name
+            run_script = strat_path / "run.py"
+            
+            if not strat_path.exists():
+                console.print(f"[red]Estrategia '{strat_name}' no encontrada en {strat_path}[/red]")
+                return
+                
+            if not run_script.exists():
+                console.print(f"[red]El archivo de ejecución '{run_script}' no existe en la estrategia.[/red]")
+                return
+                
+            console.print(f"[bold green]Iniciando estrategia '{strat_name}'...[/bold green]")
+            # Ejecutar el script usando el binario de Python adecuado (detectando el entorno virtual)
+            import subprocess
+            import os
+            
+            python_exe = sys.executable
+            # Si el intérprete actual es del sistema, buscamos los entornos virtuales conocidos
+            if python_exe in ["/usr/bin/python3", "/usr/bin/python", "python3", "python"]:
+                home = os.path.expanduser("~")
+                candidates = [
+                    os.path.join(os.getcwd(), ".venv", "bin", "python"),
+                    os.path.join(home, ".venv_flux_quant", "bin", "python"),
+                    os.path.join(home, ".venv_analisis_activos", "bin", "python"),
+                ]
+                for candidate in candidates:
+                    if os.path.exists(candidate):
+                        python_exe = candidate
+                        break
+
+            try:
+                # Usar cwd para que la estrategia encuentre sus módulos relativos correctamente
+                subprocess.run([python_exe, "run.py"], cwd=str(strat_path))
+            except Exception as e:
+                console.print(f"[red]Error al ejecutar la estrategia: {e}[/red]")
+                logger.exception("Error al ejecutar estrategia externa")
+                
+        else:
+            console.print(f"[red]Subcomando desconocido: {subcmd}[/red]")
+
+    def cmd_order(self, args: list[str]) -> None:
+        """Gestiona la ejecución de órdenes (MT5, Binance, NinjaTrader)."""
+        if not args:
+            console.print("[yellow]Uso: order <send|status|paper|history|cancel|positions> ...[/yellow]")
             return
             
         subcmd = args[0].lower()
