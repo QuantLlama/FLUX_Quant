@@ -48,3 +48,25 @@ data/raw/
 
 # Variables de entorno
 .env
+
+# --- Artefactos de runtime (generados, no versionables) ---
+
+# Modelos ML entrenados
+strategies/**/outputs/models/*.pth
+strategies/**/outputs/models/*.pt
+strategies/**/outputs/models/*.h5
+strategies/**/outputs/models/*.onnx
+
+# Plots y dashboards generados
+strategies/**/outputs/plots/
+strategies/**/outputs/dashboard.html
+
+# Estado operacional de live trading
+strategies/**/live_status.json
+strategies/**/history.json
+
+# Outputs generales del sistema
+outputs/
+
+# Historial de sesión raíz
+history.json
