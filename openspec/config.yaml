@@ -1,5 +1,18 @@
 project:
-  name: "Analisis_Activos"
-  stack: ["python", "pandas", "fastapi", "yfinance"]
-  test_framework: null
-  sdd_mode: "openspec"
+  name: "FLUX_Quant"
+  stack: ["python", "pandas", "fastapi", "yfinance", "plotext"]
+context: "A Python quantitative analysis and trading system using FastAPI, pandas, and yfinance, with a CLI built on rich and prompt_toolkit."
+strict_tdd: false
+testing:
+  test_runner: null
+  test_layers: []
+  coverage_tools: null
+  linters_and_formatters: []
+phase_rules:
+  propose: "Focus on clear business rules and target users."
+  spec: "Draft structural specs before design."
+  design: "Architecture tradeoffs."
+  tasks: "Break down into actionable PR slices."
+  apply: "Implement following strict Python conventions."
+  verify: "Manually verify unless test framework is added."
+  archive: "Store final state in openspec."

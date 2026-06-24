@@ -30,3 +30,15 @@
     - Create a `rich.table.Table` with columns: `Platform`, `Symbol`, `Size`, `PnL`.
     - Iterate over the unified position dictionaries, color-coding PnL (green for >0, red for <0).
     - Display aggregate PnL row.
+
+## Phase 3: Verification & Test Remediation
+**Goal:** Fix failing pre-existing tests and add unit tests for the new PnL tracking feature.
+
+- [x] Add unit tests for PnL tracking
+  - Create `tests/test_pnl_tracking.py` (or mock MT5 & CCXT Binance positions to test `order_executor` position fetching and normalization logic).
+- [x] Fix pre-existing test failures
+  - Fix `test_calculate_extensions_up` & `test_calculate_extensions_down` in `tests/analysis/test_fibonacci.py` (KeyError 1.0).
+  - Fix `test_square_of_9` in `tests/analysis/test_gann.py` (KeyError '360°').
+  - Fix `test_detect_fvg` in `tests/analysis/test_imbalance.py` (Assert 18.0 == 10.0 due to sorting reorder).
+  - Fix `test_calculate_macd` in `tests/analysis/test_indicators.py` (pandas Series comparison syntax).
+

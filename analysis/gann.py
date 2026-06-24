@@ -104,7 +104,9 @@ def square_of_9(price: float, steps: int = 8) -> dict:
         new_sqrt = sqrt_price + angle_offset
         if new_sqrt > 0:
             new_price = new_sqrt ** 2
-            angle_deg = (i * 45) % 360
+            angle_deg = (i * 90) % 360
+            if angle_deg == 0 and i != 0:
+                angle_deg = 360
             levels.append({
                 "step": i,
                 "angle_deg": angle_deg,
@@ -116,9 +118,10 @@ def square_of_9(price: float, steps: int = 8) -> dict:
     key_angles = [0, 90, 180, 270, 360]
     key_levels = {}
     for lvl in levels:
-        for ka in key_angles:
-            if lvl["angle_deg"] == ka and ka not in key_levels:
-                key_levels[f"{ka}°"] = lvl["price"]
+        if lvl["step"] >= 0:
+            for ka in key_angles:
+                if lvl["angle_deg"] == ka and f"{ka}°" not in key_levels:
+                    key_levels[f"{ka}°"] = lvl["price"]
 
     return {
         "base_price": price,
