@@ -18,16 +18,16 @@ FOR /F "tokens=2" %%i IN ('python --version') DO SET PYTHON_VERSION=%%i
 echo [OK] Python %PYTHON_VERSION% encontrado.
 
 REM Crear entorno virtual
-IF NOT EXIST ".venv" (
-    echo [...] Creando entorno virtual .venv ...
-    python -m venv .venv
+IF NOT EXIST ".venv_win" (
+    echo [...] Creando entorno virtual .venv_win ...
+    python -m venv .venv_win
     echo [OK] Entorno virtual creado.
 ) ELSE (
     echo [OK] Entorno virtual ya existe.
 )
 
 REM Activar entorno
-call .venv\Scripts\activate.bat
+call .venv_win\Scripts\activate.bat
 echo [OK] Entorno virtual activado.
 
 REM Actualizar pip
@@ -48,7 +48,7 @@ echo ==============================================
 echo   Setup completado exitosamente!
 echo.
 echo   Para activar el entorno:
-echo     .venv\Scripts\activate.bat
+echo     .venv_win\Scripts\activate.bat
 echo.
 echo   Para iniciar el sistema:
 echo     flux
