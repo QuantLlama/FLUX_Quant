@@ -2,11 +2,11 @@ project:
   name: "FLUX_Quant"
   stack: ["python", "pandas", "fastapi", "yfinance", "plotext"]
 context: "A Python quantitative analysis and trading system using FastAPI, pandas, and yfinance, with a CLI built on rich and prompt_toolkit."
-strict_tdd: false
+strict_tdd: true
 testing:
-  test_runner: null
-  test_layers: []
-  coverage_tools: null
+  test_runner: pytest
+  test_layers: ["unit", "integration", "slow"]
+  coverage_tools: pytest-cov
   linters_and_formatters: []
 phase_rules:
   propose: "Focus on clear business rules and target users."

@@ -89,6 +89,7 @@ mode = "live"
 default_broker = "binance_futures"
 max_position_usd = 5000.0
 max_risk_per_trade_pct = 2.0
+active_crypto_exchange = "binance"
 
 [mt5.symbol_aliases]
 "EURUSD=X" = [ "EURUSD", "EURUSD.a", "EURUSDm",]
@@ -103,6 +104,6 @@ MSFT = [ "MSFT", "MSFT.US", "#MSFT",]
 NVDA = [ "NVDA", "NVDA.US", "#NVDA",]
 
 [trading.binance]
-futures_leverage = 1
+futures_leverage = 100
 testnet_spot = true
 testnet_futures = true

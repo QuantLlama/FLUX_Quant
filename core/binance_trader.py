@@ -112,7 +112,7 @@ def send_binance_spot_order(spec: OrderSpec, paper: bool = True) -> dict:
         
         # Calculate amount
         entry_price = spec.entry_price if spec.entry_price else exchange.fetch_ticker(symbol)['last']
-        amount = spec.size_usd / entry_price
+        amount = spec.lots if spec.lots else (spec.size_usd / entry_price)
         amount = float(exchange.amount_to_precision(symbol, amount))
         
         side = spec.side.lower()
@@ -173,7 +173,7 @@ def send_binance_futures_order(spec: OrderSpec, paper: bool = True) -> dict:
             logger.warning(f"Could not set leverage: {e}")
 
         entry_price = spec.entry_price if spec.entry_price else exchange.fetch_ticker(symbol)['last']
-        amount = spec.size_usd / entry_price
+        amount = spec.lots if spec.lots else (spec.size_usd / entry_price)
         amount = float(exchange.amount_to_precision(symbol, amount))
         
         side = spec.side.lower()
