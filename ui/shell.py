@@ -162,7 +162,7 @@ class AnalysisShell:
             },
             "strategy": {
                 "list": None,
-                "run": {"quantum_llama": None},
+                "run": {"quantum_llama": None, "order_flow_scalping": None},
             }
         })
         

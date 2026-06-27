@@ -229,6 +229,69 @@ def detect_liquidity_pools(df: pd.DataFrame, tolerance_pct: float = 0.2) -> dict
     }
 
 
+
+
+def calculate_l2_ofi(
+    bids_t: dict, bids_t_1: dict, asks_t: dict, asks_t_1: dict
+) -> float:
+    """
+    Calculates the Order Flow Imbalance (OFI) from Level 2 order book updates at t and t-1.
+    Each parameter is a dict containing 'price' and 'size'.
+    """
+    p_b_t, q_b_t = float(bids_t["price"]), float(bids_t["size"])
+    p_b_t_1, q_b_t_1 = float(bids_t_1["price"]), float(bids_t_1["size"])
+    p_a_t, q_a_t = float(asks_t["price"]), float(asks_t["size"])
+    p_a_t_1, q_a_t_1 = float(asks_t_1["price"]), float(asks_t_1["size"])
+
+    # Bid Quantity Delta
+    if p_b_t > p_b_t_1:
+        delta_q_b = q_b_t
+    elif p_b_t == p_b_t_1:
+        delta_q_b = q_b_t - q_b_t_1
+    else:
+        delta_q_b = 0.0
+
+    # Ask Quantity Delta
+    if p_a_t > p_a_t_1:
+        delta_q_a = 0.0
+    elif p_a_t == p_a_t_1:
+        delta_q_a = q_a_t - q_a_t_1
+    else:
+        delta_q_a = q_a_t
+
+    return delta_q_b - delta_q_a
+
+
+def calculate_tick_volume_ofi(df: pd.DataFrame, source: str = "binance") -> pd.Series:
+    """
+    Calculates fallback tick-level volume OFI.
+    For 'binance', reads Taker_Buy_Volume and Taker_Sell_Volume.
+    For 'mt5', estimates volume imbalance using OHLC close relative position.
+    """
+    if source == "binance":
+        # OFI = V_taker_buy - V_taker_sell
+        taker_buy = df.get("Taker_Buy_Volume", pd.Series(0.0, index=df.index))
+        taker_sell = df.get("Taker_Sell_Volume", pd.Series(0.0, index=df.index))
+        return pd.Series(taker_buy - taker_sell, name="ofi", index=df.index)
+    elif source == "mt5":
+        # OFI = Volume * (Close - Low)/(High - Low) - Volume * (High - Close)/(High - Low)
+        high = df["High"]
+        low = df["Low"]
+        close = df["Close"]
+        volume = df["Volume"]
+        
+        range_val = high - low
+        # Avoid division by zero
+        range_val = range_val.replace(0.0, 1e-9)
+        
+        buy_volume = volume * (close - low) / range_val
+        sell_volume = volume * (high - close) / range_val
+        
+        return pd.Series(buy_volume - sell_volume, name="ofi", index=df.index)
+    else:
+        raise ValueError(f"Unknown source: {source}")
+
+
 def full_imbalance_analysis(df: pd.DataFrame) -> dict:
     """Análisis completo: FVG + Order Blocks + Liquidity Pools."""
     fvg = detect_fvg(df)
@@ -258,3 +321,5 @@ def full_imbalance_analysis(df: pd.DataFrame) -> dict:
         "bear_signal_count": bear_signals,
         "bias": "ALCISTA" if bull_signals > bear_signals else "BAJISTA" if bear_signals > bull_signals else "NEUTRAL",
     }
+
+
