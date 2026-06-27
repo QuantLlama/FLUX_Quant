@@ -149,12 +149,17 @@ def main():
         border_style="cyan"
     ))
     
-    symbol = Prompt.ask("Seleccioná el símbolo a operar", choices=["BTCUSDT", "MES", "MNQ", "GC", "CL"], default="BTCUSDT")
+    symbol = Prompt.ask("Seleccioná el símbolo a operar", choices=["BTC-USDT", "MES", "MNQ", "GC", "CL"], default="BTC-USDT")
     threshold = FloatPrompt.ask("Umbral de OFI (Z-Score)", default=2.5)
+    
+    # Normalize input
+    symbol = symbol.upper().strip()
+    if symbol == "BTCUSDT":
+        symbol = "BTC-USDT"
     
     # Prompt for leverage and lot size
     leverage = 1
-    if symbol == "BTCUSDT":
+    if symbol == "BTC-USDT":
         leverage = IntPrompt.ask("Apalancamiento (1-125)", default=10)
         lot_size = FloatPrompt.ask("Lotaje / Tamaño en BTC", default=0.01)
         config.set("trading.binance.futures_leverage", leverage)
@@ -194,7 +199,7 @@ def main():
                 
                 # For real calculation, calculate OFI
                 if len(df) >= 2:
-                    mock_ofi = calculate_tick_volume_ofi(df.tail(2), source="binance" if symbol == "BTCUSDT" else "mt5")
+                    mock_ofi = calculate_tick_volume_ofi(df.tail(2), source="binance" if symbol == "BTC-USDT" else "mt5")
                     z_score = float(mock_ofi.iloc[-1]) / (df["Volume"].tail(10).std() + 1e-9)
                     strat.ofi_z_scores.append(z_score)
                 else:
@@ -206,7 +211,8 @@ def main():
                 # Display status line
                 console.print(f"[dim]{time.strftime('%H:%M:%S')}[/dim] | Modo: [bold]{mode}[/bold] | Precio: [bold]{price:.2f}[/bold] | OFI Z-Score: {z_score:+.2f} | Pivots: {len(strat.swing_lows)}L/{len(strat.swing_highs)}H | FVGs: {len(strat.active_fvgs)}", end="\r")
             else:
-                console.print("[yellow]Esperando datos del proveedor de mercado...[/yellow]", end="\r")
+                err_msg = info.get("error", "Esperando respuesta del servidor")
+                console.print(f"[yellow]Esperando datos del proveedor de mercado ({err_msg})...[/yellow]      ", end="\r")
                 
             time.sleep(1.0)
             tick_count += 1
