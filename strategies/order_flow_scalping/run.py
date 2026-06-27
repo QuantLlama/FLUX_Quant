@@ -133,9 +133,10 @@ class OrderFlowScalpingStrategy:
 def main():
     from rich.console import Console
     from rich.panel import Panel
-    from rich.prompt import Prompt, FloatPrompt
+    from rich.prompt import Prompt, FloatPrompt, IntPrompt
     from core.data_provider import DataProvider
     from core.order_executor import order_executor
+    from core.config import config
     import random
     
     console = Console()
@@ -151,11 +152,23 @@ def main():
     symbol = Prompt.ask("Seleccioná el símbolo a operar", choices=["BTCUSDT", "MES", "MNQ", "GC", "CL"], default="BTCUSDT")
     threshold = FloatPrompt.ask("Umbral de OFI (Z-Score)", default=2.5)
     
+    # Prompt for leverage and lot size
+    leverage = 1
+    if symbol == "BTCUSDT":
+        leverage = IntPrompt.ask("Apalancamiento (1-125)", default=10)
+        lot_size = FloatPrompt.ask("Lotaje / Tamaño en BTC", default=0.01)
+        config.set("trading.binance.futures_leverage", leverage)
+    else:
+        lot_size = FloatPrompt.ask("Lotaje / Cantidad de contratos", default=1.0)
+        
     console.print(f"\n[green]Conectando con el proveedor de datos y cargando feed para [bold]{symbol}[/bold]...[/green]")
-    console.print("[dim]Presioná Ctrl+C para detener la estrategia y volver a la consola.[/dim]\n")
+    console.print(f"[dim]Apalancamiento: {leverage}x | Lotaje: {lot_size} | Presioná Ctrl+C para detener la estrategia y volver a la consola.[/dim]\n")
     
-    # Initialize strategy and provider
-    strat = OrderFlowScalpingStrategy({"ofi_threshold": threshold})
+    # Initialize strategy and provider with custom lot size
+    strat = OrderFlowScalpingStrategy({
+        "ofi_threshold": threshold,
+        "lot_size": lot_size
+    })
     provider = DataProvider()
     
     tick_count = 0
