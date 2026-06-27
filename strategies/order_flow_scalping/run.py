@@ -143,9 +143,9 @@ def main():
     mode = order_executor.mode.upper() # "LIVE" or "PAPER"
     
     console.print(Panel(
-        f"[bold cyan]ORDER FLOW SCALPING ENGINE v1.0.0[/bold cyan]\n"
-        f"[white]Estrategia Institucional basada en Microestructura y Flujo de Órdenes[/white]\n\n"
-        f"Modo de Operación: [bold {'green]REAL (LIVE)' if mode == 'LIVE' else 'yellow]SIMULADO (PAPER)'}[/bold]",
+        "[bold cyan]ORDER FLOW SCALPING ENGINE v1.0.0[/bold cyan]\n"
+        "[white]Estrategia Institucional basada en Microestructura y Flujo de Órdenes[/white]\n\n"
+        f"Modo de Operación: " + ("[bold green]REAL (LIVE)[/bold green]" if mode == "LIVE" else "[bold yellow]SIMULADO (PAPER)[/bold yellow]"),
         border_style="cyan"
     ))
     
