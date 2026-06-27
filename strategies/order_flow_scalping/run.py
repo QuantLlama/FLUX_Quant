@@ -35,8 +35,12 @@ class OrderFlowScalpingStrategy:
         return projected_slippage <= self.config.get("max_slippage_pips", 2.0)
 
     def process_tick(self, tick: dict, projected_slippage: float = 0.0):
+        from rich.console import Console
+        console = Console()
+        
         self.tick_history.append(tick)
         price = tick.get("close", tick.get("low", 0.0))
+        symbol = tick.get("symbol", "BTC-USDT")
         
         # Track swing high/low points based on tick history window
         if len(self.tick_history) >= 3:
@@ -56,29 +60,79 @@ class OrderFlowScalpingStrategy:
             z_score = self.ofi_z_scores[-1]
             fvg_present = len(self.active_fvgs) > 0
             
+            # --- BULLISH TRIGGER (BUY) ---
             if sweep_type == "BULLISH" and z_score >= self.config.get("ofi_threshold", 2.5) and fvg_present:
-                # Trigger Entry BUY
                 atr = self.calculate_atr()
                 sl = tick.get("low") - self.config.get("sl_offset_multiplier", 0.5) * atr
                 tp1 = price + (price - sl)
                 tp2 = self.swing_highs[-1] if self.swing_highs else price + 2 * (price - sl)
                 
+                # Use user custom lot size
+                lot_size = self.config.get("lot_size", 0.01)
+                
                 spec = OrderSpec(
-                    symbol=tick.get("symbol", "BTCUSDT"),
+                    symbol=symbol,
                     side="BUY",
                     order_type="MARKET",
                     entry_price=price,
                     sl=sl,
                     tp1=tp1,
                     tp2=tp2,
-                    size_usd=100.0,
-                    lots=None,
+                    size_usd=price * lot_size,
+                    lots=lot_size,
                     source="order_flow_scalping",
                     confidence=0.8,
                     rr=(tp1 - price)/(price - sl),
                     notes="OFI + Sweep + FVG Entry"
                 )
-                order_executor.send(spec, broker="binance_futures")
+                
+                console.print(f"\n[bold green]🚨 SEÑAL DE COMPRA DETECTADA! Enviando orden a mercado...[/bold green]")
+                console.print(f"[white]Símbolo: {symbol} | Entrada: {price:.2f} | SL: {sl:.2f} | TP1: {tp1:.2f} | TP2: {tp2:.2f}[/white]")
+                
+                broker = "binance_futures" if symbol == "BTC-USDT" else "mt5"
+                res = order_executor.send(spec, broker=broker)
+                
+                if res.get("ok"):
+                    console.print(f"[bold green]✓ Orden de COMPRA ejecutada con éxito. ID: {res.get('order_id')}[/bold green]\n")
+                else:
+                    console.print(f"[bold red]❌ Error al ejecutar orden de COMPRA: {res.get('error')}[/bold red]\n")
+            
+            # --- BEARISH TRIGGER (SELL) ---
+            elif sweep_type == "BEARISH" and z_score <= -self.config.get("ofi_threshold", 2.5) and fvg_present:
+                atr = self.calculate_atr()
+                sl = tick.get("high") + self.config.get("sl_offset_multiplier", 0.5) * atr
+                tp1 = price - (sl - price)
+                tp2 = self.swing_lows[-1] if self.swing_lows else price - 2 * (sl - price)
+                
+                # Use user custom lot size
+                lot_size = self.config.get("lot_size", 0.01)
+                
+                spec = OrderSpec(
+                    symbol=symbol,
+                    side="SELL",
+                    order_type="MARKET",
+                    entry_price=price,
+                    sl=sl,
+                    tp1=tp1,
+                    tp2=tp2,
+                    size_usd=price * lot_size,
+                    lots=lot_size,
+                    source="order_flow_scalping",
+                    confidence=0.8,
+                    rr=(sl - tp1)/(sl - price),
+                    notes="OFI + Sweep + FVG Entry"
+                )
+                
+                console.print(f"\n[bold red]🚨 SEÑAL DE VENTA DETECTADA! Enviando orden a mercado...[/bold red]")
+                console.print(f"[white]Símbolo: {symbol} | Entrada: {price:.2f} | SL: {sl:.2f} | TP1: {tp1:.2f} | TP2: {tp2:.2f}[/white]")
+                
+                broker = "binance_futures" if symbol == "BTC-USDT" else "mt5"
+                res = order_executor.send(spec, broker=broker)
+                
+                if res.get("ok"):
+                    console.print(f"[bold green]✓ Orden de VENTA ejecutada con éxito. ID: {res.get('order_id')}[/bold green]\n")
+                else:
+                    console.print(f"[bold red]❌ Error al ejecutar orden de VENTA: {res.get('error')}[/bold red]\n")
 
     def detect_sweep(self, tick: dict) -> tuple[bool, str]:
         # Bullish Sweep: Low sweeps a previous Swing Low, but current price closes above that swing low level.
