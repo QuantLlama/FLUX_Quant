@@ -107,3 +107,21 @@ NVDA = [ "NVDA", "NVDA.US", "#NVDA",]
 futures_leverage = 100
 testnet_spot = true
 testnet_futures = true
+
+[asian_session]
+enabled = true
+symbols = ["MES=F", "MNQ=F"]
+session_start_utc = "00:00"
+session_end_utc = "08:00"
+entry_window_start_utc = "07:30"
+entry_window_end_utc = "09:30"
+max_trades_per_day = 2
+min_atr_percentile = 60
+atr_sl_multiplier = 1.5
+rr_target_1 = 2.0
+rr_target_2 = 3.0
+cooldown_minutes = 30
+data_timeframe = "5m"
+entry_timeframe = "1m"
+news_filter_enabled = true
+news_block_minutes = 30
