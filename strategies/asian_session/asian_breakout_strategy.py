@@ -1,3 +1,9 @@
+"""
+strategies/asian_session/asian_breakout_strategy.py
+
+Main strategy class orchestrating range calculation, trade guard, news filter,
+breakout logic, and order execution for the Asian session on MES/MNQ futures.
+"""
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone

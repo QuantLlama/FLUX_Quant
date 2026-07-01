@@ -1,3 +1,9 @@
+"""
+strategies/asian_session/news_filter.py
+
+News-aware trading guard blocks entry around high-impact economic events.
+Supports pluggable providers and symbol-to-currency mapping.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

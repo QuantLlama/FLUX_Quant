@@ -1,3 +1,10 @@
+"""
+strategies/asian_session/run.py — CLI entry point.
+
+Interactive terminal UI for the Asian Session Breakout strategy.
+Prompts for symbol and lot size, then runs a live loop:
+fetch data -> process Asian range -> check breakout -> execute signal.
+"""
 from __future__ import annotations
 
 import os

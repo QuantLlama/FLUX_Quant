@@ -1,3 +1,9 @@
+"""
+strategies/asian_session/trade_guard.py
+
+Daily trade guard with cooldown and max-trade enforcement.
+State machine: IDLE -> COOLDOWN -> BLOCKED -> (daily reset) -> IDLE
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass

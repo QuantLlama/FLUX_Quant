@@ -1,3 +1,10 @@
+"""
+strategies/asian_session/breakout_logic.py
+
+Breakout detection engine: evaluates price against Asian session range,
+computes confidence based on volatility, and generates trade signals
+with configured SL/TP levels.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass
