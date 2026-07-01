@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -177,14 +178,23 @@ class DataProvider:
             except Exception as e:
                 logger.warning(f"Fallo MetaTrader 5 para {symbol}, cayendo a yfinance: {e}")
 
+        # Cuando MT5 falló y el símbolo es formato MT5 nativo (MESU26, ESZ25, etc.),
+        # convertir a equivalente yfinance (MES=F, ES=F, etc.) para el fallback.
+        yf_symbol = symbol
+        if df is None or df.empty:
+            root = self._mt5_root_symbol(symbol)
+            if root and root != symbol.upper():
+                yf_symbol = f"{root}=F"
+                logger.info(f"Símbolo MT5 nativo detectado, probando yfinance con {yf_symbol}")
+
         try:
-            ticker = yf.Ticker(symbol)
+            ticker = yf.Ticker(yf_symbol)
 
             if df is None or df.empty:
-                logger.info(f"Usando yfinance API para {symbol}")
+                logger.info(f"Usando yfinance API para {yf_symbol}")
                 df = ticker.history(period=period, interval=timeframe, auto_adjust=True)
                 if df.empty:
-                    logger.warning(f"Sin datos para {symbol} {timeframe} {period}")
+                    logger.warning(f"Sin datos para {yf_symbol} {timeframe} {period}")
                     return pd.DataFrame(), {}
                 
                 df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
@@ -312,12 +322,30 @@ class DataProvider:
             return "Crypto"
             
         # MT5 Futures heuristics (MESU26, MNQZ25, etc.)
-        futures_prefixes = ("MES", "ES", "MNQ", "NQ", "MYM", "YM", "RTY", "M2K", "CL", "GC", "SI", "ZN", "ZB")
+        futures_prefixes = (
+            "MES", "ES", "MNQ", "NQ", "MYM", "YM", "RTY", "M2K",
+            "CL", "GC", "SI", "NG", "HG", "ZC", "ZS", "ZW", "ZN", "ZB",
+        )
         for pref in futures_prefixes:
             if s.startswith(pref) and any(char.isdigit() for char in s):
                 return "Futuros/Commodities"
                 
         return "Acción/ETF"
+
+    @staticmethod
+    def _mt5_root_symbol(symbol: str) -> str | None:
+        """Extrae la raíz de un símbolo MT5 nativo (MESU26 → MES, ESZ25 → ES) o None si no aplica."""
+        s = symbol.upper().strip()
+        if s.endswith("=F") or s.endswith("=X"):
+            return None
+        root_prefixes = (
+            "MES", "ES", "MNQ", "NQ", "MYM", "YM", "RTY", "M2K",
+            "CL", "GC", "SI", "NG", "HG", "ZC", "ZS", "ZW", "ZN", "ZB",
+        )
+        match = re.match(r'^([A-Z]{1,4})[FGHJKMNQUVXZ]\d{1,2}$', s)
+        if match and match.group(1) in root_prefixes:
+            return match.group(1)
+        return None
 
 # Instancia global
 data_provider = DataProvider()
